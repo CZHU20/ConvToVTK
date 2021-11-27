@@ -8,6 +8,7 @@ MYFCFUN  = vtkComMod.f90          \
            vtkLegacyParser.f90    \
            conv2vtk.f90           \
            gneu2vtk.f90           \
+           gmsh2vtk.f90           \
            p2vtk.f90              \
            VTKXML.f90
 

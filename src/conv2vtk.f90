@@ -56,6 +56,10 @@
       if ( endswith(trim(fName), '.neu') ) then 
          write(stdout, ftab1) "Converting Gambit neu file to vtk.."
          msh%fname = fName
+         call conv_gneu2vtk(msh)
+      elseif ( endswith(trim(fName), '.msh') ) then
+         write(stdout,ftab1) "Converting GMSH msh file to vtk.."
+         msh%fname = fName
          call conv_gmsh2vtk(msh)
       else
          write(stdout,ftab1,advance='no') &
