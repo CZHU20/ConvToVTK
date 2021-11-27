@@ -1,0 +1,4 @@
+./Beam_Coarse/Beam.connectivity
+./Beam_Coarse/Beam.coordinates
+./Beam_Coarse/mesh-surfaces/Beam_interface.ebc
+./Beam_Coarse/mesh-surfaces/Beam_left.ebc
