@@ -15,10 +15,7 @@
 
       type(meshType), intent(out)  :: msh
 
-      real(kind=8) :: rtemp
-      integer :: fid
-      integer :: i, j, n, itemp, tag, iFa
-      character(len=strL) :: rLine
+      integer :: fid, i
 
       fid = 100
       write(stdout,ftab1) "Loading file "//TRIM(msh%fname)
@@ -51,7 +48,17 @@
       ! Assemble boundary mesh
       call gmsh_boundarymesh(msh)
 
+      call selectel(msh)
+
       ! debug
+      do i = 1, msh%nNo
+         write(11111,*) i, msh%x(1:nsd,i)
+      end do
+
+      do i = 1, msh%nEl
+         write(22222,"(5I8)") i, msh%IEN(:,i)
+      end do
+
       stop
 
       return
@@ -187,6 +194,8 @@
             gmshElements%eNoN(i) = 4 ! 4-node quadrangle.
          case(4)
             gmshElements%eNoN(i) = 4 ! 4-node tetrahedron.
+         case(15)
+            gmshElements%eNoN(i) = 1 ! 1-node point.
          ! case(5)
          !    gmshElements%eNoN(i) = 8 ! 8-node hexahedron.
          ! case(8)
@@ -556,3 +565,4 @@
 
       return
       end subroutine gmsh_boundarymesh
+!***********************************************************************
