@@ -35,15 +35,8 @@
       ! PhysicalNames
       call gmsh_readphysicalnames(fid)
 
-
-      ! ! Entities
-      ! call findKwrd(fid, "$Entities")
-      ! read(fid,*) numPoints, numCurves, numSurfaces, numVolumes
-
-      ! print *, "numPoints   =", numPoints    
-      ! print *, "numCurves   =", numCurves    
-      ! print *, "numSurfaces =", numSurfaces  
-      ! print *, "numVolumes  =", numVolumes   
+      ! Entities
+      call gmsh_readentities(fid)
       
       ! Nodes
       call gmsh_readnodes(fid)
@@ -77,6 +70,7 @@
       integer :: i, j
 
       ! metadata
+      rewind(fid)
       call findKwrd(fid, "$MeshFormat")
       read(fid,*) rtemp, i, j
       if ( i .ne. 0) then
@@ -98,7 +92,8 @@
       integer, intent(inout) :: fid
 
       integer :: i, n
-
+      
+      rewind(fid)
       call findKwrd(fid, "$PhysicalNames")
       read(fid,*) n
 
@@ -109,6 +104,13 @@
       do i = 1, gmshPhysicalNames%num
          read(fid,*) gmshPhysicalNames%dimension(i), gmshPhysicalNames%physicalTag(i), gmshPhysicalNames%name(i)
       end do
+
+      if (nsd .ne. MAXVAL(gmshPhysicalNames%dimension)) then
+         write(stdout,"(14X,A,I5)") "nsd = ", nsd
+         write(stdout,"(14X,A,I5)") "MAXVAL(gmshPhysicalNames%dimension) = ", MAXVAL(gmshPhysicalNames%dimension)
+         write(stdout,ftab4) "Both body mesh and surface mesh need to be assigned to a physical group."
+         stop
+      end if
 
       return
       end subroutine gmsh_readphysicalnames
@@ -124,7 +126,8 @@
 
       integer :: i, j, itemp
       integer, allocatable :: NodeTag(:)
-   
+         
+      rewind(fid)
       call findKwrd(fid, "$Nodes")
       read(fid,*) gmshNodes%numNodeBlocks, gmshNodes%numNodes, &
                   gmshNodes%minNodeTag, gmshNodes%maxNodeTag
@@ -159,6 +162,7 @@
 
       integer :: i, j, itemp, ie, eNoN, maxeNoN
 
+      rewind(fid)
       call findKwrd(fid, "$Elements")
       read(fid,*) gmshElements%numElementBlocks, gmshElements%numElements, &
                   gmshElements%minElementTag, gmshElements%maxElementTag
@@ -181,16 +185,16 @@
             gmshElements%eNoN(i) = 4 ! 4-node quadrangle.
          case(4)
             gmshElements%eNoN(i) = 4 ! 4-node tetrahedron.
-         case(5)
-            gmshElements%eNoN(i) = 8 ! 8-node hexahedron.
-         case(8)
-            gmshElements%eNoN(i) = 3 ! 3-node second order line
-         case(9)
-            gmshElements%eNoN(i) = 6 ! 6-node second order triangle
-         case(10)
-            gmshElements%eNoN(i) = 9 ! 9-node second order quadrangle 
-         case(11)
-            gmshElements%eNoN(i) = 10 ! 10-node second order tetrahedron 
+         ! case(5)
+         !    gmshElements%eNoN(i) = 8 ! 8-node hexahedron.
+         ! case(8)
+         !    gmshElements%eNoN(i) = 3 ! 3-node second order line
+         ! case(9)
+         !    gmshElements%eNoN(i) = 6 ! 6-node second order triangle
+         ! case(10)
+         !    gmshElements%eNoN(i) = 9 ! 9-node second order quadrangle 
+         ! case(11)
+         !    gmshElements%eNoN(i) = 10 ! 10-node second order tetrahedron 
          case default 
             write(stdout,ftab4) "ERROR: elelment type not defined!"
          end select
@@ -218,3 +222,130 @@
 
       return
       end subroutine gmsh_readelements
+!***********************************************************************
+!     Read Entities
+      subroutine gmsh_readentities(fid)
+      use varmod
+      use gmshMod
+
+      implicit none
+
+      integer, intent(inout) :: fid
+
+      integer :: i, maxNumTags
+      integer :: numPhysicalTags, PhysicalTags, Tag
+      real(kind=8) :: rtemp
+
+      rewind(fid)
+      call findKwrd(fid, "$Entities")
+      read(fid,*) gmshEntities%numPoints, gmshEntities%numCurves, &
+                  gmshEntities%numSurfaces, gmshEntities%numVolumes
+
+      maxNumTags = 1 !gmshPhysicalNames%num
+
+      ! Point entites
+      if (gmshEntities%numPoints > 0) then
+         allocate(gmshEntities%Point_numPhysicalTags(gmshEntities%numPoints))
+         allocate(gmshEntities%Point_PhysicalTags(gmshEntities%numPoints,maxNumTags))
+         gmshEntities%Point_numPhysicalTags = 0
+         gmshEntities%Point_PhysicalTags = 0
+
+         do i = 1, gmshEntities%numPoints
+            read(fid,*) Tag, rtemp, rtemp, rtemp, numPhysicalTags
+            if (numPhysicalTags > 1) then
+               write(stdout,ftab4) "ERROR: each point entity can only has one physical name."
+               stop
+            elseif (numPhysicalTags == 1) then
+               BACKSPACE(fid)
+               read(fid,*) Tag, rtemp, rtemp, rtemp, numPhysicalTags, PhysicalTags
+               gmshEntities%Point_numPhysicalTags(Tag) = 1
+               gmshEntities%Point_PhysicalTags(Tag,1) = PhysicalTags
+            end if
+         end do
+      end if
+
+      ! Curve entites
+      if (gmshEntities%numCurves > 0) then
+         allocate(gmshEntities%Curve_numPhysicalTags(gmshEntities%numCurves))
+         allocate(gmshEntities%Curve_PhysicalTags(gmshEntities%numCurves,maxNumTags))
+         gmshEntities%Curve_numPhysicalTags = 0
+         gmshEntities%Curve_PhysicalTags = 0
+
+         do i = 1, gmshEntities%numCurves
+            read(fid,*) Tag, rtemp, rtemp, rtemp, rtemp, rtemp, rtemp, numPhysicalTags
+            if (numPhysicalTags > 1) then
+               write(stdout,ftab4) "ERROR: each curve entity can only has one physical name."
+               stop
+            elseif (numPhysicalTags == 1) then
+               BACKSPACE(fid)
+               read(fid,*) Tag, rtemp, rtemp, rtemp, rtemp, rtemp, rtemp, numPhysicalTags, PhysicalTags
+               gmshEntities%Curve_numPhysicalTags(Tag) = 1
+               gmshEntities%Curve_PhysicalTags(Tag,1) = PhysicalTags
+            end if
+         end do
+      end if
+
+      ! Surface entites
+      if (gmshEntities%numSurfaces > 0) then
+         allocate(gmshEntities%Surface_numPhysicalTags(gmshEntities%numSurfaces))
+         allocate(gmshEntities%Surface_PhysicalTags(gmshEntities%numSurfaces,maxNumTags))
+         gmshEntities%Surface_numPhysicalTags = 0
+         gmshEntities%Surface_PhysicalTags = 0
+
+         do i = 1, gmshEntities%numSurfaces
+            read(fid,*) Tag, rtemp, rtemp, rtemp, rtemp, rtemp, rtemp, numPhysicalTags
+            if (numPhysicalTags > 1) then
+               write(stdout,ftab4) "ERROR: each surface entity can only has one physical name."
+               stop
+            elseif (numPhysicalTags == 1) then
+               BACKSPACE(fid)
+               read(fid,*) Tag, rtemp, rtemp, rtemp, rtemp, rtemp, rtemp, numPhysicalTags, PhysicalTags
+               gmshEntities%Surface_numPhysicalTags(Tag) = 1
+               gmshEntities%Surface_PhysicalTags(Tag,1) = PhysicalTags
+            end if
+         end do
+      end if
+
+      ! Volume entites
+      if (gmshEntities%numVolumes > 0) then
+         allocate(gmshEntities%Volume_numPhysicalTags(gmshEntities%numVolumes))
+         allocate(gmshEntities%Volume_PhysicalTags(gmshEntities%numVolumes,maxNumTags))
+         gmshEntities%Volume_numPhysicalTags = 0
+         gmshEntities%Volume_PhysicalTags = 0
+
+         do i = 1, gmshEntities%numVolumes
+            read(fid,*) Tag, rtemp, rtemp, rtemp, rtemp, rtemp, rtemp, numPhysicalTags
+            if (numPhysicalTags > 1) then
+               write(stdout,ftab4) "ERROR: each volume entity can only has one physical name."
+               stop
+            elseif (numPhysicalTags == 1) then
+               BACKSPACE(fid)
+               read(fid,*) Tag, rtemp, rtemp, rtemp, rtemp, rtemp, rtemp, numPhysicalTags, PhysicalTags
+               gmshEntities%Volume_numPhysicalTags(Tag) = 1
+               gmshEntities%Volume_PhysicalTags(Tag,1) = PhysicalTags
+            end if
+         end do
+      end if
+
+      ! debug
+
+      ! print *, "numPoints   =", gmshEntities%numPoints    
+      ! print *, "numCurves   =", gmshEntities%numCurves    
+      ! print *, "numSurfaces =", gmshEntities%numSurfaces  
+      ! print *, "numVolumes  =", gmshEntities%numVolumes  
+
+      ! print *, repeat('---',10)
+      ! print *, gmshEntities%Point_numPhysicalTags
+      ! print *, gmshEntities%Point_PhysicalTags
+      ! print *, repeat('---',10)
+      ! print *, gmshEntities%Curve_numPhysicalTags
+      ! print *, gmshEntities%Curve_PhysicalTags
+      ! print *, repeat('---',10)
+      ! print *, gmshEntities%Surface_numPhysicalTags
+      ! print *, gmshEntities%Surface_PhysicalTags
+      ! print *, repeat('---',10)
+      ! print *, gmshEntities%Volume_numPhysicalTags
+      ! print *, gmshEntities%Volume_PhysicalTags
+
+      return
+      end subroutine gmsh_readentities
