@@ -6,8 +6,6 @@
 !
 !--------------------------------------------------------------------
 
-      include "./gmshMod.f90"
-
       subroutine conv_gmsh2vtk(msh)
       use varmod
       use gmshMod

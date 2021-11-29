@@ -3,6 +3,7 @@ include Makefile.in
 
 MYEXEC = $(BIN_DIR)/conv_msh2vtk.exe
 MYFCFUN  = vtkComMod.f90          \
+           gmshMod.f90            \
            vtkTypeParams.f90      \
            vtkXMLParser.f90       \
            vtkLegacyParser.f90    \
