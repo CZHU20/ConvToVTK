@@ -53,6 +53,7 @@
       end type gmshElementType
 
       ! Variables
+      integer, allocatable :: g2l(:)
       type(gmshPhysicalNameType) :: gmshPhysicalNames
       type(gmshNodeType)         :: gmshNodes
       type(gmshElementType)      :: gmshElements
