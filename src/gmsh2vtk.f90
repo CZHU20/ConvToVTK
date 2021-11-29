@@ -49,18 +49,10 @@
       ! Assemble boundary mesh
       call gmsh_boundarymesh(msh)
 
+      ! Check mesh orientation
+      call gmsh_checkIEN(msh)
+
       call selectel(msh)
-
-      ! debug
-      do fid = 1, msh%nNo
-         write(11111,*) fid, msh%x(1:nsd,fid)
-      end do
-
-      do fid = 1, msh%nEl
-         write(22222,"(5I8)") fid, msh%IEN(:,fid)
-      end do
-
-      ! stop
 
       return
       end subroutine conv_gmsh2vtk
@@ -648,13 +640,6 @@
             end do
          end do
 
-         ! ! debug
-         ! if (msh%fa(iFa)%fname .eq. "bottom") then
-         !    print *, msh%fa(iFa)%gE
-         !    print *, msh%fa(iFa)%gN
-         !    stop
-         ! end if
-
       end do !iFa
 
       ! deallocate
@@ -664,3 +649,17 @@
       return
       end subroutine gmsh_boundarymesh
 !***********************************************************************
+!     Read gmsh meta data
+      subroutine gmsh_checkIEN(msh)
+      use varmod
+      use gmshMod
+
+      implicit none
+
+      Type(meshType), intent(inout) :: msh
+
+      write(stdout,ftab4) "WARNING: may need to implement subroutine to check mesh orientation."
+      write(stdout,ftab4) "WARNING: may need to implement subroutine to check mesh orientation."
+
+      return
+      end subroutine gmsh_checkIEN
