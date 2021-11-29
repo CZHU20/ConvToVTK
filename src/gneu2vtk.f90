@@ -4,7 +4,7 @@
 !
 !--------------------------------------------------------------------
 
-      subroutine conv_gmsh2vtk(msh)
+      subroutine conv_gneu2vtk(msh)
       use varmod
       implicit none
 
@@ -163,7 +163,7 @@
          end do
       end do
 
-      end subroutine conv_gmsh2vtk
+      end subroutine conv_gneu2vtk
 
 !***********************************************************************
 

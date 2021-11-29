@@ -5,16 +5,16 @@
 !--------------------------------------------------------------------
 
       module stdParams
-        character(len=8), parameter :: ftab1="(4X,A)"
-        character(len=8), parameter :: ftab2="(8X,A)"
-        character(len=9), parameter :: ftab3="(12X,A)"
-        character(len=9), parameter :: ftab4="(14X,A)"
-        character, parameter :: eol=achar(0)
-        character, parameter :: newl=achar(10)
+      character(len=8), parameter :: ftab1="(4X,A)"
+      character(len=8), parameter :: ftab2="(8X,A)"
+      character(len=9), parameter :: ftab3="(12X,A)"
+      character(len=9), parameter :: ftab4="(14X,A)"
+      character, parameter :: eol=achar(0)
+      character, parameter :: newl=achar(10)
 
       integer, parameter :: stdout=6
       real(kind=8), parameter :: eps=EPSILON(eps)
-
+      
       integer, parameter :: strL=400
       integer, parameter :: maxToks=30
       integer, parameter :: maxNSD=3
@@ -347,11 +347,11 @@
          character(*), intent(in) ::  a,b
          logical :: c
          integer ::  l
-         l = len(a) - len(b)	!find the tail end of a that b might match.
-         if (l.lt.0) then	!dare not use an or, because of full evaluation risks.
+         l = len(a) - len(b) !find the tail end of a that b might match.
+         if (l.lt.0) then !dare not use an or, because of full evaluation risks.
             c = .False.
             return 
-         else if (a(l + 1:l + len(b)).ne.b) then	!otherwise, it is safe to look.
+         else if (a(l + 1:l + len(b)).ne.b) then !otherwise, it is safe to look.
             c = .False.
             return 
          else
