@@ -34,33 +34,6 @@
 
       ! Entities
       call gmsh_readentities(fid)
-
-      ! debug
-      ! print *, repeat('-',30)
-      ! print *, "Num of points = ", gmshEntities%numPoints
-      ! print *, "Num of points tags = ", gmshEntities%Point_numPhysicalTags(:)
-      ! do fid = 1, gmshEntities%numPoints
-      !    print *, fid, gmshEntities%Point_physicalTags(fid,:)
-      ! end do
-      ! print *, repeat('-',30)
-      ! print *, "Num of curves = ", gmshEntities%numCurves
-      ! print *, "Num of Curves tags = ", gmshEntities%Curve_numPhysicalTags(:)
-      ! do fid = 1, gmshEntities%numCurves
-      !    print *, fid, gmshEntities%Curve_physicalTags(fid,:)
-      ! end do
-      ! print *, repeat('-',30)
-      ! print *, "Num of surfaces = ", gmshEntities%numSurfaces
-      ! print *, "Num of Surface tags = ", gmshEntities%Surface_numPhysicalTags(:)
-      ! do fid = 1, gmshEntities%numSurfaces
-      !    print *, fid, gmshEntities%Surface_physicalTags(fid,:)
-      ! end do
-      ! print *, repeat('-',30)
-      ! print *, "Num of volumes = ", gmshEntities%numVolumes
-      ! print *, "Num of Volume tags = ", gmshEntities%Volume_numPhysicalTags(:)
-      ! do fid = 1, gmshEntities%numVolumes
-      !    print *, fid, gmshEntities%Volume_physicalTags(fid,:)
-      ! end do
-      ! stop
       
       ! Nodes
       ! Please note not all nodes are grid points, e.g. center of the circle.
@@ -259,14 +232,6 @@
          end do
       end do
 
-      ! debug
-      ! print *, repeat('-',20)
-      ! print *, gmshElements%numElementBlocks
-      ! do i = 1, gmshElements%numElementBlocks
-      !    print *, i, gmshElements%numElementsInBlock(i), gmshElements%EntityTag(i)
-      ! end do
-      ! stop
-
       return
       end subroutine gmsh_readelements
 !***********************************************************************
@@ -373,26 +338,6 @@
             end if
          end do
       end if
-
-      ! debug
-
-      ! print *, "numPoints   =", gmshEntities%numPoints    
-      ! print *, "numCurves   =", gmshEntities%numCurves    
-      ! print *, "numSurfaces =", gmshEntities%numSurfaces  
-      ! print *, "numVolumes  =", gmshEntities%numVolumes  
-
-      ! print *, repeat('---',10)
-      ! print *, gmshEntities%Point_numPhysicalTags
-      ! print *, gmshEntities%Point_PhysicalTags
-      ! print *, repeat('---',10)
-      ! print *, gmshEntities%Curve_numPhysicalTags
-      ! print *, gmshEntities%Curve_PhysicalTags
-      ! print *, repeat('---',10)
-      ! print *, gmshEntities%Surface_numPhysicalTags
-      ! print *, gmshEntities%Surface_PhysicalTags
-      ! print *, repeat('---',10)
-      ! print *, gmshEntities%Volume_numPhysicalTags
-      ! print *, gmshEntities%Volume_PhysicalTags
 
       return
       end subroutine gmsh_readentities
@@ -513,10 +458,9 @@
       ! coordinates
       msh%nNo = id
       allocate(msh%x(nsd,msh%nNo))
-      id = 0
       do i = 1, gmshNodes%numNodes
          if (g2l(i) .ne. 0) then
-            msh%x(:,g2l(i)) = gmshNodes%coord(:,i)
+            msh%x(:,g2l(i)) = gmshNodes%coord(1:nsd,i)
          end if
       end do
 
@@ -535,142 +479,187 @@
 
       Type(meshType), intent(inout) :: msh
 
-      ! integer :: i, j, k, l, ii, ie, Tag, iFa
-      ! integer,allocatable :: physicalTag(:), gIEN(:,:), g2l(:)
-      ! integer,allocatable :: sharedelem(:,:), numshared(:)
-      ! logical,allocatable :: flag(:)
+      integer :: i, j, k, l, ii, ie, Tag, iFa, iTag
+      integer :: nEl, eNoN, numEntityTags, numinBlocks
+      integer,allocatable :: physicalTag(:), gIEN(:,:), lg2l(:)
+      integer,allocatable :: sharedelem(:,:), numshared(:), entityTag(:)
+      logical,allocatable :: flag(:)
 
-      ! allocate(g2l(msh%nNo))
+      ! For boundary points, it requires two global-to-local mappings.
+      ! g2l: since we need to remove some unnecessary points in gmshNodes, 
+      !      this mapping is built to contruct the body mesh
+      ! lg2l: when writing boundaries to vtp files, we need a local connectivity
+      !      system, this mapping maps **body mesh**, i.e. after g2l, to local.
+      allocate(lg2l(msh%nNo))
 
-      ! ! element that share the same node
-      ! ! this is for finding global element id
-      ! allocate(sharedelem(msh%nNo,50), numshared(msh%nNo))
-      ! sharedelem = 0
-      ! numshared  = 0
-      ! do i = 1, msh%nEl
-      !    do j = 1, msh%eNoN
-      !       k = msh%IEN(j,i)
-      !       numshared(k) = numshared(k)+1
-      !       if (numshared(k) .GT. 50) then
-      !          write(stdout,ftab4) "ERROR: numshared is larger than 50."
-      !          stop
-      !       end if
-      !       sharedelem(k,numshared(k)) = i
-      !    end do
-      ! end do
+      ! element that share the same node
+      ! this is for finding global element id
+      allocate(sharedelem(msh%nNo,50), numshared(msh%nNo))
+      sharedelem = 0
+      numshared  = 0
+      do i = 1, msh%nEl
+         do j = 1, msh%eNoN
+            k = msh%IEN(j,i)
+            numshared(k) = numshared(k)+1
+            if (numshared(k) .GT. 50) then
+               write(stdout,ftab4) "ERROR: numshared is larger than 50."
+               stop
+            end if
+            sharedelem(k,numshared(k)) = i
+         end do
+      end do
       
-      ! msh%nFa = 0
-      ! do i = 1, gmshPhysicalNames%num
-      !    if (gmshPhysicalNames%dimension(i) .eq. nsd-1) then
-      !       msh%nFa = msh%nFa+1
-      !    end if
-      ! end do
-      ! allocate(msh%fa(msh%nFa), physicalTag(msh%nFa))
-      ! j = 0
-      ! do i = 1, gmshPhysicalNames%num
-      !    if (gmshPhysicalNames%dimension(i) .eq. nsd-1) then
-      !       j = j + 1
-      !       physicalTag(j)  = gmshPhysicalNames%physicalTag(i)
-      !       msh%fa(j)%fname = gmshPhysicalNames%name(i) 
-      !    end if
-      ! end do
+      msh%nFa = 0
+      do i = 1, gmshPhysicalNames%num
+         if (gmshPhysicalNames%dimension(i) .eq. nsd-1) then
+            msh%nFa = msh%nFa+1
+         end if
+      end do
+      allocate(msh%fa(msh%nFa), physicalTag(msh%nFa))
+      j = 0
+      do i = 1, gmshPhysicalNames%num
+         if (gmshPhysicalNames%dimension(i) .eq. nsd-1) then
+            j = j + 1
+            physicalTag(j)  = gmshPhysicalNames%physicalTag(i)
+            msh%fa(j)%fname = gmshPhysicalNames%name(i) 
+         end if
+      end do
 
-      ! ! loop over faces to construct mesh files
-      ! do iFa = 1, msh%nFa
-      !    ! Find the corresponding EntityTags for boundary meshes
-      !    ! ndim=2, CurveTag
-      !    ! ndim=3, SurfaceTag
-      !    Tag = -1
-      !    if (nsd .eq. 2) then
-      !       do j = 1, gmshEntities%numCurves
-      !          do k = 1, gmshEntities%Curve_numPhysicalTags(j)
-      !             if (physicalTag(iFa) .eq. gmshEntities%Curve_physicalTags(j,k)) &
-      !                Tag = j
-      !          end do
-      !       end do
-      !    elseif (nsd .eq. 3) then
-      !       do j = 1, gmshEntities%numSurfaces
-      !          do k = 1, gmshEntities%Surface_numPhysicalTags(j)
-      !             if (physicalTag(iFa) .eq. gmshEntities%Surface_physicalTags(j,k)) &
-      !                Tag = j
-      !          end do
-      !       end do
-      !    end if
-      !    if (Tag .eq. -1) then
-      !       write(stdout,ftab4) "ERROR: cannot find corresponding entitiy."
-      !       stop
-      !    end if
+      ! Loop over faces to construct mesh files.
+      ! Please note that there might be multiple entity tags
+      ! for one physical tag
+      do iFa = 1, msh%nFa
 
-      !    ! coord and conn for boundary mesh
-      !    j = 1
-      !    do i = 1, gmshElements%numElementBlocks
-      !       if (gmshElements%EntityTag(i) .eq. Tag) then
-      !          msh%fa(iFa)%eNoN = gmshElements%eNoN(i)
-      !          msh%fa(iFa)%nEl  = gmshElements%numElementsInBlock(i)
-      !          if (allocated(gIEN)) deallocate(gIEN)
-      !          allocate(gIEN(msh%fa(iFa)%eNoN,msh%fa(iFa)%nEl))
-      !          gIEN = gmshElements%conn(1:msh%fa(iFa)%eNoN,j:(j+msh%fa(iFa)%nEl-1))
-      !          exit
-      !       end if
-      !       j = j + gmshElements%numElementsInBlock(i)
-      !    end do
+         ! Find the corresponding EntityTags for boundary meshes
+         ! ndim=2, CurveTag
+         ! ndim=3, SurfaceTag
+         if (nsd .eq. 2) then
+            if (.not. allocated(entityTag)) &
+               allocate(entityTag(gmshEntities%numCurves))
+            entityTag = 0
+            numEntityTags = 0
+            do j = 1, gmshEntities%numCurves
+               do k = 1, gmshEntities%Curve_numPhysicalTags(j)
+                  if (physicalTag(iFa) .eq. gmshEntities%Curve_physicalTags(j,k)) then
+                     numEntityTags = numEntityTags + 1
+                     entityTag(numEntityTags) = j
+                  end if
+               end do
+            end do
+         elseif (nsd .eq. 3) then
+            if (.not. allocated(entityTag)) &
+               allocate(entityTag(gmshEntities%numSurfaces))
+            entityTag = 0
+            numEntityTags = 0
+            do j = 1, gmshEntities%numSurfaces
+               do k = 1, gmshEntities%Surface_numPhysicalTags(j)
+                  if (physicalTag(iFa) .eq. gmshEntities%Surface_physicalTags(j,k)) then
+                     numEntityTags = numEntityTags + 1
+                     entityTag(numEntityTags) = j
+                  end if
+               end do
+            end do
+         end if
+         if (numEntityTags .eq. 0) then
+            write(stdout,ftab4) "ERROR: cannot find corresponding entitiy."
+            stop
+         end if         
 
-      !    ! convert gIEN to local IEN and determine gN
-      !    g2l = 0
-      !    msh%fa(iFa)%nNo = 0
-      !    do i = 1, msh%fa(iFa)%nEl
-      !       do j = 1, msh%fa(iFa)%eNoN
-      !          k = gIEN(j,i)
-      !          if (g2l(k) .eq. 0) then
-      !             msh%fa(iFa)%nNo = msh%fa(iFa)%nNo + 1
-      !             g2l(k) = msh%fa(iFa)%nNo
-      !          end if
-      !       end do
-      !    end do
-      !    allocate(msh%fa(iFa)%gN(msh%fa(iFa)%nNo),msh%fa(iFa)%x(3,msh%fa(iFa)%nNo))
-      !    do i = 1, msh%nNo
-      !       if (g2l(i) .ne. 0) then
-      !          j = g2l(i)
-      !          msh%fa(iFa)%gN(j) = i
-      !          msh%fa(iFa)%x(:,j) = msh%x(:,i)
-      !       end if
-      !    end do
-      !    allocate(msh%fa(iFa)%IEN(msh%fa(iFa)%eNoN,msh%fa(iFa)%nEl))
-      !    do i = 1, msh%fa(iFa)%nEl
-      !       do j = 1, msh%fa(iFa)%eNoN
-      !          msh%fa(iFa)%IEN(j,i) = g2l(gIEN(j,i))
-      !       end do
-      !    end do
+         ! raw connectivity for boundary mesh
+         nEl = 0
+         do iTag = 1, numEntityTags
+            Tag = entityTag(iTag)
+            j = 0
+            do i = 1, gmshElements%numElementBlocks
+               if (gmshElements%ElementDim(i) .eq. nsd-1) then
+               if (gmshElements%EntityTag(i) .eq. Tag) then
+                  eNoN = gmshElements%eNoN(i)
+                  ! msh%fa(iFa)%eNoN = eNoN
+                  if (.not. allocated(gIEN)) & 
+                     allocate(gIEN(eNoN,gmshElements%numElements))
+                  numinBlocks = gmshElements%numElementsinBlock(i)
+                  gIEN(1:eNoN,nEl+1:nEl+numinBlocks) = gmshElements%conn(1:eNoN,j+1:j+numinBlocks)
+                  nEl = nEl + numinBlocks
+                  exit
+               end if
+               end if
+               j = j + gmshElements%numElementsInBlock(i)
+            end do
+         end do
+         
+         ! first global to local mapping
+         do i = 1, nEl
+            do j = 1, eNoN
+               gIEN(j,i) = g2l(gIEN(j,i))
+            end do
+         end do
 
-      !    ! find global element id
-      !    allocate(msh%fa(iFa)%gE(msh%fa(iFa)%nEl))
-      !    if (allocated(flag)) deallocate(flag)
-      !    allocate(flag(msh%fa(iFa)%eNoN))
-      !    do i = 1, msh%fa(iFa)%nEl
-      !       ii = gIEN(1,i)
-      !       do k = 1, numshared(ii)
-      !          flag = .FALSE.
-      !          ie = sharedelem(ii,k)
-      !          do j = 1, msh%fa(iFa)%eNoN               
-      !             do l = 1, msh%eNoN
-      !                if (gIEN(j,i) .eq. msh%IEN(l,ie)) then
-      !                   flag(j) = .TRUE.
-      !                   exit
-      !                end if
-      !             end do
-      !          end do
-      !          if (ALL(flag)) then
-      !             msh%fa(iFa)%gE(i) = ie
-      !             exit
-      !          end if 
-      !       end do
-      !    end do
+         ! convert gIEN to local IEN and determine gN
+         ! second global to local mapping
+         lg2l = 0
+         msh%fa(iFa)%nNo  = 0
+         msh%fa(iFa)%eNoN = eNoN
+         msh%fa(iFa)%nEl  = nEl
+         do i = 1, msh%fa(iFa)%nEl
+            do j = 1, msh%fa(iFa)%eNoN
+               k = gIEN(j,i)
+               if (lg2l(k) .eq. 0) then
+                  msh%fa(iFa)%nNo = msh%fa(iFa)%nNo + 1
+                  lg2l(k) = msh%fa(iFa)%nNo
+               end if
+            end do
+         end do
+         allocate(msh%fa(iFa)%gN(msh%fa(iFa)%nNo),msh%fa(iFa)%x(nsd,msh%fa(iFa)%nNo))
+         do i = 1, msh%nNo
+            if (lg2l(i) .ne. 0) then
+               j = lg2l(i)
+               msh%fa(iFa)%gN(j) = i
+               msh%fa(iFa)%x(:,j) = msh%x(:,i)
+            end if
+         end do
+         allocate(msh%fa(iFa)%IEN(msh%fa(iFa)%eNoN,msh%fa(iFa)%nEl))
+         do i = 1, msh%fa(iFa)%nEl
+            do j = 1, msh%fa(iFa)%eNoN
+               msh%fa(iFa)%IEN(j,i) = lg2l(gIEN(j,i))
+            end do
+         end do
 
-      ! end do !iFa
+         ! find global element id
+         allocate(msh%fa(iFa)%gE(msh%fa(iFa)%nEl))
+         if (allocated(flag)) deallocate(flag)
+         allocate(flag(msh%fa(iFa)%eNoN))
+         do i = 1, msh%fa(iFa)%nEl
+            ii = gIEN(1,i)
+            do k = 1, numshared(ii)
+               flag = .FALSE.
+               ie = sharedelem(ii,k)
+               do j = 1, msh%fa(iFa)%eNoN               
+                  do l = 1, msh%eNoN
+                     if (gIEN(j,i) .eq. msh%IEN(l,ie)) then
+                        flag(j) = .TRUE.
+                        exit
+                     end if
+                  end do
+               end do
+               if (ALL(flag)) then
+                  msh%fa(iFa)%gE(i) = ie
+                  exit
+               end if 
+            end do
+         end do
 
-      ! ! deallocate
-      ! deallocate(physicalTag, gIEN, g2l)
-      ! deallocate(sharedelem, numshared, flag)
+         ! ! debug
+         ! if (msh%fa(iFa)%fname .eq. "bottom") then
+         !    print *, msh%fa(iFa)%gE
+         !    print *, msh%fa(iFa)%gN
+         !    stop
+         ! end if
+
+      end do !iFa
+
+      ! deallocate
+      deallocate(physicalTag, gIEN, g2l, lg2l)
+      deallocate(sharedelem, numshared, entityTag, flag)
 
       return
       end subroutine gmsh_boundarymesh
