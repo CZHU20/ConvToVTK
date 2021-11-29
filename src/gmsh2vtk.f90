@@ -51,15 +51,15 @@
       call selectel(msh)
 
       ! debug
-      do i = 1, msh%nNo
-         write(11111,*) i, msh%x(1:nsd,i)
-      end do
+      ! do i = 1, msh%nNo
+      !    write(11111,*) i, msh%x(1:nsd,i)
+      ! end do
 
-      do i = 1, msh%nEl
-         write(22222,"(5I8)") i, msh%IEN(:,i)
-      end do
+      ! do i = 1, msh%nEl
+      !    write(22222,"(5I8)") i, msh%IEN(:,i)
+      ! end do
 
-      stop
+      ! stop
 
       return
       end subroutine conv_gmsh2vtk
@@ -413,7 +413,7 @@
                msh%nEl = gmshElements%numElementsinBlock(i)
                msh%eNoN = gmshElements%eNoN(i)
                allocate(msh%IEN(msh%eNoN,msh%nEl))
-               msh%IEN = gmshElements%conn(1:msh%eNoN,j:(j+msh%nEl))
+               msh%IEN = gmshElements%conn(1:msh%eNoN,j:(j+msh%nEl-1))
             end if
          end if
          j = j + gmshElements%numElementsInBlock(i)
@@ -505,11 +505,18 @@
                msh%fa(iFa)%nEl  = gmshElements%numElementsInBlock(i)
                if (allocated(gIEN)) deallocate(gIEN)
                allocate(gIEN(msh%fa(iFa)%eNoN,msh%fa(iFa)%nEl))
-               gIEN = gmshElements%conn(1:msh%fa(iFa)%eNoN,j:(j+msh%fa(iFa)%nEl))
+               gIEN = gmshElements%conn(1:msh%fa(iFa)%eNoN,j:(j+msh%fa(iFa)%nEl-1))
                exit
             end if
             j = j + gmshElements%numElementsInBlock(i)
          end do
+
+         ! debug
+         if (msh%fa(iFa)%fname == "Left") then
+            print *, msh%fa(iFa)%eNoN, msh%fa(ifa)%nEl
+            print *, gIEN
+         end if
+         stop
 
          ! convert gIEN to local IEN and determine gN
          g2l = 0
