@@ -41,7 +41,6 @@
       character(len=strL) :: fName, temp 
 
       integer :: i, j, k, fid, nlines, io
-      integer, allocatable :: indx(:)
 
       i = IARGC()
       if (i .eq. 0) then

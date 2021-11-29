@@ -15,7 +15,7 @@
 
       type(meshType), intent(out)  :: msh
 
-      integer :: fid, i
+      integer :: fid
 
       fid = 100
       write(stdout,ftab1) "Loading file "//TRIM(msh%fname)
@@ -371,9 +371,10 @@
       Type(meshType), intent(inout) :: msh
 
       integer :: i, j, id, physicalTag, Tag
-      character(len=20) :: name
+      character(len=80) :: name
 
       j = 0
+      physicalTag = -1
       do i = 1, gmshPhysicalNames%num
          if (nsd .eq. gmshPhysicalNames%dimension(i)) then
             id = i
@@ -386,9 +387,14 @@
          write(stdout,ftab4) "ERROR: can only handle one body mesh."
          stop
       end if
+      if (physicalTag .eq. -1) then
+         write(stdout,ftab4) "ERROR: cannot find corresponding entitiy."
+         stop
+      end if
 
       ! determine the surface tag for 2D problem
       ! volume tag for 3D problem
+      Tag = -1
       if (nsd .eq. 2) then
          do i = 1, gmshEntities%numSurfaces
             do j = 1, gmshEntities%Surface_numPhysicalTags(i)
@@ -403,6 +409,10 @@
                   Tag = i
             end do
          end do
+      end if
+      if (Tag .eq. -1) then
+         write(stdout,ftab4) "ERROR: cannot find corresponding entitiy."
+         stop
       end if
 
       ! connectivity
@@ -437,7 +447,7 @@
       Type(meshType), intent(inout) :: msh
 
       integer :: i, j, k, l, ii, ie, Tag, iFa
-      integer,allocatable :: physicalTag(:), gIEN(:,:), g2l(:), l2g(:)
+      integer,allocatable :: physicalTag(:), gIEN(:,:), g2l(:)
       integer,allocatable :: sharedelem(:,:), numshared(:)
       logical,allocatable :: flag(:)
 
@@ -481,6 +491,7 @@
          ! Find the corresponding EntityTags for boundary meshes
          ! ndim=2, CurveTag
          ! ndim=3, SurfaceTag
+         Tag = -1
          if (nsd .eq. 2) then
             do j = 1, gmshEntities%numCurves
                do k = 1, gmshEntities%Curve_numPhysicalTags(j)
@@ -495,6 +506,10 @@
                      Tag = j
                end do
             end do
+         end if
+         if (Tag .eq. -1) then
+            write(stdout,ftab4) "ERROR: cannot find corresponding entitiy."
+            stop
          end if
 
          ! coord and conn for boundary mesh
@@ -511,12 +526,12 @@
             j = j + gmshElements%numElementsInBlock(i)
          end do
 
-         ! debug
-         if (msh%fa(iFa)%fname == "Left") then
-            print *, msh%fa(iFa)%eNoN, msh%fa(ifa)%nEl
-            print *, gIEN
-         end if
-         stop
+         ! ! debug
+         ! if (msh%fa(iFa)%fname == "Left") then
+         !    print *, msh%fa(iFa)%eNoN, msh%fa(ifa)%nEl
+         !    print *, gIEN
+         ! end if
+         ! stop
 
          ! convert gIEN to local IEN and determine gN
          g2l = 0

@@ -347,11 +347,11 @@
          character(*), intent(in) ::  a,b
          logical :: c
          integer ::  l
-         l = len(a) - len(b)	!find the tail end of a that b might match.
-         if (l.lt.0) then	!dare not use an or, because of full evaluation risks.
+         l = len(a) - len(b) !find the tail end of a that b might match.
+         if (l.lt.0) then !dare not use an or, because of full evaluation risks.
             c = .False.
             return 
-         else if (a(l + 1:l + len(b)).ne.b) then	!otherwise, it is safe to look.
+         else if (a(l + 1:l + len(b)).ne.b) then !otherwise, it is safe to look.
             c = .False.
             return 
          else

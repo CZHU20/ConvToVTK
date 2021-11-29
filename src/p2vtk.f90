@@ -21,7 +21,7 @@
 
          type(meshType), intent(inout) :: lM 
 
-         integer :: a, e, i, j, is, ie, ii, jj
+         integer :: i, j, is, ie, ii, jj
          integer :: npts, eNoN
          integer, allocatable :: conn(:,:), indx(:)
          real(kind=8), allocatable :: coord(:,:)
@@ -108,12 +108,12 @@
          type(faceType), intent(inout) :: lFa 
          integer, intent(in) :: insd
 
-         integer :: i, npts, eNoN, ie, ge
+         integer :: i, npts, eNoN, ie
          integer, allocatable, dimension(:) :: indx, gN
          integer, allocatable, dimension(:,:)  :: conn
          integer :: min_val, max_val
          
-         ! Build new connectivity matrix 
+         ! Build new connectivity matrix
          if (insd .eq. 2) then 
             eNoN = 6 
             lFa%vtkType = 22
@@ -404,7 +404,6 @@
       implicit none
       
       type(meshType), intent(inout) :: msh
-      character(len=strL) :: fname
 
       integer :: ifa
 
