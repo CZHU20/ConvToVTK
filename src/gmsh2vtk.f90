@@ -48,7 +48,7 @@
       call gmsh_boundarymesh(msh)
 
       ! Check mesh orientation
-      call gmsh_checkIEN(msh)
+      ! call gmsh_checkIEN(msh)
 
       call selectel(msh)
 

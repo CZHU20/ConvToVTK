@@ -1,0 +1,4 @@
+./P1/Beam.connectivity
+./P1/Beam.coordinates
+./P1/mesh-surfaces/Beam_interface.ebc
+./P1/mesh-surfaces/Beam_left.ebc
