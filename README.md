@@ -50,3 +50,7 @@ Four examples are included here to further demonstrate the usage.
    ../../bin/conv_msh2vtk.exe gmsh_flow_past_cylinder.msh
    ```
    Type 2 when asked for the dimension of the body mesh. When generating mesh using GMSH, remember to assign physical groups to both the body mesh and the boundary meshes.
+   
+## Contributors
+   [Vijay Vedula](https://github.com/vvedula22)  
+   [Chi Zhu](https://github.com/CZHU20)
