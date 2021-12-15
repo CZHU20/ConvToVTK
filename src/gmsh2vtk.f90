@@ -13,7 +13,7 @@
 
       type(meshType), intent(out)  :: msh
 
-      integer :: fid
+      integer :: fid, iFa
 
       fid = 100
       write(stdout,ftab1) "Loading file "//TRIM(msh%fname)
@@ -52,6 +52,15 @@
 
       call selectel(msh)
 
+      ! Output general statistics
+      write(stdout,ftab2) "Nsd: "//TRIM(STR(nsd))
+      write(stdout,ftab2) "nNo: "//TRIM(STR(msh%nNo))
+      write(stdout,ftab2) "nEl: "//TRIM(STR(msh%nEl))
+      write(stdout,ftab2) "nFa: "//TRIM(STR(msh%nFa))
+      do iFa=1, msh%nFa
+         write(stdout,ftab3) "Face <"//TRIM(msh%fa(iFa)%fname)//">"
+      end do
+      
       return
       end subroutine conv_gmsh2vtk
 
